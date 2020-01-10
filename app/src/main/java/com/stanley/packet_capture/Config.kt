@@ -1,5 +1,5 @@
 package com.stanley.packet_capture
 
 object Config {
-    const val MTU_SIZE = 6258
+    const val MTU_SIZE = Short.MAX_VALUE.toInt()
 }

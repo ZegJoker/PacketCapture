@@ -101,7 +101,7 @@ class TCP(val ip: IP): Packet() {
         }
         get() = ip.packet.copyOfRange(
             ip.headerLength + TCPHeaderOffsets.OPTIONS,
-            dataOffset.toInt()
+            ip.headerLength + dataOffset
         )
     var data
         set(value) {

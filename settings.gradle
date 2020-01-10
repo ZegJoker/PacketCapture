@@ -1,0 +1,2 @@
+include ':app', ':tcpip'
+rootProject.name='TCPIP_Demo'

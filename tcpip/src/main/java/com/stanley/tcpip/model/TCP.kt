@@ -32,11 +32,11 @@ class TCP(val ip: IP): Packet() {
             ip.packet.writeInt(ip.headerLength + TCPHeaderOffsets.ACK_NUM, value)
         }
     var dataOffset =
-        ip.packet[ip.headerLength + TCPHeaderOffsets.DATA_OFFSET].toInt().shr(4).and(0x0F).toByte()
+        ip.packet[ip.headerLength + TCPHeaderOffsets.DATA_OFFSET].toInt().shr(4).and(0x0F).times(4).toByte()
         set(value) {
             field = value
             ip.packet[ip.headerLength + TCPHeaderOffsets.DATA_OFFSET] =
-                value.toInt().shl(4).toByte()
+                value.toInt().div(4).shl(4).toByte()
         }
     var URG = ip.packet[ip.headerLength + TCPHeaderOffsets.CODE].toInt().shr(5).and(0x01)
         set(value) {

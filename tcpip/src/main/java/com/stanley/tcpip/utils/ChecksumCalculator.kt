@@ -1,8 +1,11 @@
 package com.stanley.tcpip.utils
 
 import com.stanley.tcpip.constants.ProtocolCodes
+import com.stanley.tcpip.utils.extensions.readShort
 import com.stanley.tcpip.utils.extensions.writeInt
 import com.stanley.tcpip.utils.extensions.writeShort
+import kotlin.experimental.and
+import kotlin.experimental.inv
 
 /**
  * IP头校验和固定为16位，当数据按位相加后高16位不为0，那么则将高16位和低16位反复相加，直到高16位为零，这个低16位数的取反则为校验和。
@@ -14,18 +17,19 @@ private fun calcIpChecksumInternal(
     initChecksum: Short = 0,
     headerOffset: Byte = 0
 ): Short {
-    val isOdd = packetLength.rem(2) != 0
-    var checksum = initChecksum.toInt()
-    var index = 0
-    for (i in headerOffset until packetLength step 2) {
-        index = i
-        checksum += (packet[i].toInt().shl(8) + packet[i + 1])
+    var checksum = initChecksum.toLong()
+    var index = headerOffset.toInt()
+    var length = packetLength
+    while(length > 1) {
+        checksum += packet.readShort(index).and(0x0FFFF.toShort())
+        index += 2
+        length -= 2
     }
 
-    if (isOdd) checksum += packet[index].toInt().shl(8)
+    if (length > 0) checksum += packet[index].toInt().and(0xFF).shl(8)
 
-    while (checksum.shr(16) != 0) {
-        checksum = checksum.and(0xFFFF) + checksum.shr(16)
+    while (checksum.shr(16) > 0) {
+        checksum = checksum.and(0x0FFFF).plus(checksum.shr(16))
     }
 
     return checksum.toShort()
@@ -36,7 +40,7 @@ private fun calcIpChecksumInternal(
  *  注：IP协议校验和只计算头部
  */
 fun calcIPChecksum(packet: ByteArray, packetLength: Int) =
-    calcIpChecksumInternal(packet, packetLength)
+    calcIpChecksumInternal(packet, packetLength).inv()
 
 /**
  * 计算TCP/UDP协议校验和
@@ -50,7 +54,7 @@ private fun calcTcpUdpChecksum(
     protocol: Byte,
     headerOffset: Byte = 0
 ): Short {
-    var checksum: Short = 0
+    var checksum: Short
     val fakeIpHeader = ByteArray(12)
     fakeIpHeader.writeInt(0, sourceIp)
     fakeIpHeader.writeInt(4, destIp)
@@ -60,11 +64,11 @@ private fun calcTcpUdpChecksum(
     checksum = calcIpChecksumInternal(
         fakeIpHeader,
         fakeIpHeader.size,
-        checksum
+        0
     )
     checksum =
         calcIpChecksumInternal(packet, packetLength, checksum, headerOffset)
-    return checksum.toInt().inv().toShort()
+    return checksum.inv()
 }
 
 fun calcTCPChecksum(

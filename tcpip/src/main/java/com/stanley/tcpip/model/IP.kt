@@ -15,13 +15,13 @@ class IP(val packet: ByteArray): Packet() {
         set(value) {
             field = value
             packet[IPHeaderOffsets.VERSION] = value.toInt().shl(4)
-                .and(packet[IPHeaderOffsets.HEADER_LENGTH].toInt().and(0x0F)).toByte()
+                .or(packet[IPHeaderOffsets.HEADER_LENGTH].toInt().and(0x0F)).toByte()
         }
     var headerLength = packet[IPHeaderOffsets.HEADER_LENGTH].toInt().and(0x0F).times(4).toByte()
         set(value) {
             field = value
             packet[IPHeaderOffsets.HEADER_LENGTH] =
-                packet[IPHeaderOffsets.HEADER_LENGTH].toInt().and(0xF0).or(value.toInt()).div(4).toByte()
+                packet[IPHeaderOffsets.VERSION].toInt().and(0xF0).or(value.toInt().div(4)).toByte()
         }
     var typeOfService = packet[IPHeaderOffsets.TYPE_OF_SERVICE]
         set(value) {

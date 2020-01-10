@@ -15,9 +15,9 @@ class PacketWriter(private val writer: FileOutputStream): Closeable {
             val ip = pendingPacketQueue.poll()
             if (ip != null) {
                 try {
-                    writer.write(ip.packet, 0, ip.totalLength.toInt())
+                    writer.write(ip.packet, 0, ip.totalLength.toInt() - 1)
                 } catch (e: Exception) {
-                    Log.e("Stanley", e.toString(), e)
+                    Log.e(TAG, e.toString(), e)
                 }
             }
         }

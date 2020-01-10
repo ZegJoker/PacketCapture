@@ -1,10 +1,8 @@
 package com.stanley.packet_capture
 
-import android.util.Log
 import com.stanley.tcpip.model.IP
 import java.io.Closeable
 import java.io.FileOutputStream
-import java.lang.Exception
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class PacketWriter(private val writer: FileOutputStream): Closeable {
@@ -14,11 +12,7 @@ class PacketWriter(private val writer: FileOutputStream): Closeable {
         if (pendingPacketQueue.isNotEmpty()) {
             val ip = pendingPacketQueue.poll()
             if (ip != null) {
-                try {
-                    writer.write(ip.packet, 0, ip.totalLength.toInt() - 1)
-                } catch (e: Exception) {
-                    Log.e(TAG, e.toString(), e)
-                }
+                writer.write(ip.packet, 0, ip.totalLength.toInt())
             }
         }
     }

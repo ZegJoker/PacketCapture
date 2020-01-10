@@ -14,14 +14,14 @@ import kotlin.experimental.inv
 private fun calcIpChecksumInternal(
     packet: ByteArray,
     packetLength: Int,
-    initChecksum: Short = 0,
-    headerOffset: Byte = 0
-): Short {
+    initChecksum: Int = 0,
+    headerOffset: Int = 0
+): Int {
     var checksum = initChecksum.toLong()
-    var index = headerOffset.toInt()
+    var index = headerOffset
     var length = packetLength
     while(length > 1) {
-        checksum += packet.readShort(index).and(0x0FFFF.toShort())
+        checksum += packet.readShort(index).toInt().and(0xFFFF)
         index += 2
         length -= 2
     }
@@ -29,10 +29,10 @@ private fun calcIpChecksumInternal(
     if (length > 0) checksum += packet[index].toInt().and(0xFF).shl(8)
 
     while (checksum.shr(16) > 0) {
-        checksum = checksum.and(0x0FFFF).plus(checksum.shr(16))
+        checksum = checksum.and(0xFFFF).plus(checksum.shr(16))
     }
 
-    return checksum.toShort()
+    return checksum.toInt()
 }
 
 /**
@@ -40,7 +40,7 @@ private fun calcIpChecksumInternal(
  *  注：IP协议校验和只计算头部
  */
 fun calcIPChecksum(packet: ByteArray, packetLength: Int) =
-    calcIpChecksumInternal(packet, packetLength).inv()
+    calcIpChecksumInternal(packet, packetLength).toShort().inv()
 
 /**
  * 计算TCP/UDP协议校验和
@@ -52,9 +52,9 @@ private fun calcTcpUdpChecksum(
     sourceIp: Int,
     destIp: Int,
     protocol: Byte,
-    headerOffset: Byte = 0
+    headerOffset: Int = 0
 ): Short {
-    var checksum: Short
+    var checksum: Int
     val fakeIpHeader = ByteArray(12)
     fakeIpHeader.writeInt(0, sourceIp)
     fakeIpHeader.writeInt(4, destIp)
@@ -68,7 +68,7 @@ private fun calcTcpUdpChecksum(
     )
     checksum =
         calcIpChecksumInternal(packet, packetLength, checksum, headerOffset)
-    return checksum.inv()
+    return checksum.toShort().inv()
 }
 
 fun calcTCPChecksum(
@@ -77,7 +77,7 @@ fun calcTCPChecksum(
     sourceIp: Int,
     destIp: Int,
     headerOffset: Byte
-) = calcTcpUdpChecksum(packet, packetLength, sourceIp, destIp, ProtocolCodes.TCP, headerOffset)
+) = calcTcpUdpChecksum(packet, packetLength, sourceIp, destIp, ProtocolCodes.TCP, headerOffset.toInt())
 
 fun calcUDPChecksum(
     packet: ByteArray,
@@ -85,4 +85,4 @@ fun calcUDPChecksum(
     sourceIp: Int,
     destIp: Int,
     headerOffset: Byte
-) = calcTcpUdpChecksum(packet, packetLength, sourceIp, destIp, ProtocolCodes.UDP, headerOffset)
+) = calcTcpUdpChecksum(packet, packetLength, sourceIp, destIp, ProtocolCodes.UDP, headerOffset.toInt())

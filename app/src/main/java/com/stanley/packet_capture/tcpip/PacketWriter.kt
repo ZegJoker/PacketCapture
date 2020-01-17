@@ -1,4 +1,4 @@
-package com.stanley.packet_capture
+package com.stanley.packet_capture.tcpip
 
 import com.stanley.tcpip.model.IP
 import java.io.Closeable

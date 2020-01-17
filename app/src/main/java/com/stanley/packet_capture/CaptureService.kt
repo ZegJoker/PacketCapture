@@ -4,6 +4,10 @@ import android.app.Service
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import com.stanley.packet_capture.constants.Config
+import com.stanley.packet_capture.tcpip.PacketDistributor
+import com.stanley.packet_capture.tcpip.PacketReader
+import com.stanley.packet_capture.tcpip.PacketWriter
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -12,8 +16,16 @@ class CaptureService : VpnService(), Closeable {
 
     var running = false
     private val vpnDescriptor: ParcelFileDescriptor by lazy { establish() }
-    private val packetReader: PacketReader by lazy { PacketReader(FileInputStream(vpnDescriptor.fileDescriptor)) }
-    private val packetWriter: PacketWriter by lazy { PacketWriter(FileOutputStream(vpnDescriptor.fileDescriptor)) }
+    private val packetReader: PacketReader by lazy {
+        PacketReader(
+            FileInputStream(vpnDescriptor.fileDescriptor)
+        )
+    }
+    private val packetWriter: PacketWriter by lazy {
+        PacketWriter(
+            FileOutputStream(vpnDescriptor.fileDescriptor)
+        )
+    }
     private val packetDistributor: PacketDistributor by lazy {
         PacketDistributor(
             packetReader.pendingPacketQueue,

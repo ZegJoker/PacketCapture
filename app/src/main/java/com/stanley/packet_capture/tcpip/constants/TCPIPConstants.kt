@@ -1,4 +1,4 @@
-package com.stanley.packet_capture
+package com.stanley.packet_capture.tcpip.constants
 
 object TCPIPConstants {
     const val DEFAULT_IP_PACKET_HEADER_LENGTH = 20

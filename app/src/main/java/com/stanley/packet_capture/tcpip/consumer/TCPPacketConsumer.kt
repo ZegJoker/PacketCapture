@@ -1,7 +1,10 @@
-package com.stanley.packet_capture
+package com.stanley.packet_capture.tcpip.consumer
 
 import android.util.Log
 import android.util.SparseArray
+import com.stanley.packet_capture.tcpip.constants.TCPIPConstants
+import com.stanley.packet_capture.tcpip.constants.TCPStatus
+import com.stanley.packet_capture.utils.TAG
 import com.stanley.tcpip.constants.ProtocolCodes
 import com.stanley.tcpip.model.IP
 import com.stanley.tcpip.model.TCP
@@ -15,7 +18,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     private val sourcePortStatus: SparseArray<TCPStatus> = SparseArray()
     override fun consumePacket(packet: TCP) {
         when (checkAndSetTcpStatus(packet)) {
-            TCPStatus.TRANSFERING -> transferData(packet)
+            TCPStatus.TRANSFERRING -> transferData(packet)
             TCPStatus.CLOSING -> closeTunnel(packet)
             else -> handshake(packet)
         }
@@ -23,7 +26,9 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
 
     private fun checkAndSetTcpStatus(tcp: TCP): TCPStatus {
         if (sourcePortStatus.get(tcp.sourcePort.toInt()) == null) {
-            sourcePortStatus.put(tcp.sourcePort.toInt(), TCPStatus.PREPARE)
+            sourcePortStatus.put(tcp.sourcePort.toInt(),
+                TCPStatus.PREPARE
+            )
         }
         return sourcePortStatus.get(tcp.sourcePort.toInt())
     }
@@ -31,7 +36,9 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     private fun handshake(tcp: TCP) {
         if (tcp.SYN == 1 && tcp.ACK == 0 && tcp.FIN == 0) {
             if (sourcePortStatus.get(tcp.sourcePort.toInt()) == TCPStatus.PREPARE) {
-                sourcePortStatus.put(tcp.sourcePort.toInt(), TCPStatus.HANDSHAKING)
+                sourcePortStatus.put(tcp.sourcePort.toInt(),
+                    TCPStatus.HANDSHAKING
+                )
                 val packet = ByteArray(60)
                 val ip = IP(packet)
                 ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
@@ -71,7 +78,9 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             Log.d(TAG, "Request to close tunnel")
             closeTunnel(tcp)
         } else if (tcp.ACK == 1) {
-            sourcePortStatus.put(tcp.sourcePort.toInt(), TCPStatus.TRANSFERING)
+            sourcePortStatus.put(tcp.sourcePort.toInt(),
+                TCPStatus.TRANSFERRING
+            )
         }
     }
 

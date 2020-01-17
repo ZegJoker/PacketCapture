@@ -1,5 +1,7 @@
-package com.stanley.packet_capture
+package com.stanley.packet_capture.tcpip
 
+import com.stanley.packet_capture.tcpip.consumer.TCPPacketConsumer
+import com.stanley.packet_capture.tcpip.consumer.UDPPacketConsumer
 import com.stanley.tcpip.constants.ProtocolCodes
 import com.stanley.tcpip.model.IP
 import com.stanley.tcpip.model.TCP
@@ -14,8 +16,16 @@ class PacketDistributor(
 
     private var running = false
 
-    private val tcpConsumer by lazy { TCPPacketConsumer(pendingWritePacketQueue) }
-    private val udpConsumer by lazy { UDPPacketConsumer(pendingWritePacketQueue) }
+    private val tcpConsumer by lazy {
+        TCPPacketConsumer(
+            pendingWritePacketQueue
+        )
+    }
+    private val udpConsumer by lazy {
+        UDPPacketConsumer(
+            pendingWritePacketQueue
+        )
+    }
 
     fun startDispatch() {
         running = true

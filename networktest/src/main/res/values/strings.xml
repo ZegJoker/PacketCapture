@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NetworkTest</string>
+    <string name="no_response">No Response</string>
+    <string name="request">Request</string>
+</resources>

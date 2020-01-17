@@ -54,7 +54,7 @@ class CaptureService : VpnService(), Closeable {
         .setMtu(Config.MTU_SIZE)
         .addAddress("10.5.37.1", 16)
         .addRoute("0.0.0.0", 0)
-        .addAllowedApplication("com.softtanck.networkaccesser")
+        .addAllowedApplication("com.stanley.networktest")
         .establish()
 
     private fun startVpn() = Thread {

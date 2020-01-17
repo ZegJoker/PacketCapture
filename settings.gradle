@@ -1,2 +1,2 @@
-include ':app', ':tcpip'
+include ':app', ':tcpip', ':networktest'
 rootProject.name='TCPIP_Demo'

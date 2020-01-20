@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         Request.Builder().url(url).build()
     ).enqueue(object: Callback {
         override fun onFailure(call: Call, e: IOException) {
+            Log.e("MainActivity", e.message, e)
         }
 
         override fun onResponse(call: Call, response: Response) {

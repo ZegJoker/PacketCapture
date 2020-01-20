@@ -9,4 +9,8 @@ class UDPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     override fun consumePacket(packet: UDP) {
     }
 
+    override fun close() {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
 }

@@ -14,7 +14,6 @@ import com.stanley.tcpip.model.IP
 import com.stanley.tcpip.model.TCP
 import com.stanley.tcpip.utils.calcIPChecksum
 import com.stanley.tcpip.utils.calcTCPChecksum
-import java.nio.channels.Selector
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.random.Random
 
@@ -24,8 +23,7 @@ import kotlin.random.Random
 class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>) :
     PacketConsumer<TCP>, Tunnel.Callback {
     private val tunnelArray: SparseArray<TCPTunnel> = SparseArray()
-    private val selector = Selector.open()
-    val dataObserver = TCPDataObserver(selector)
+    val dataObserver = TCPDataObserver(tunnelArray)
     override fun consumePacket(packet: TCP) {
         when (checkAndSetTcpStatus(packet).status) {
             TCPStatus.TRANSFERRING -> transferData(packet)
@@ -36,8 +34,14 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
 
     private fun checkAndSetTcpStatus(tcp: TCP): TCPTunnel {
         if (tunnelArray.get(tcp.sourcePort.toInt()) == null) {
-            tunnelArray.put(tcp.sourcePort.toInt(),
-                TCPTunnel(tcp.ip.sourceAddress, tcp.sourcePort.toInt(), tcp.ip.destAddress, tcp.destPort.toInt(), selector)
+            tunnelArray.put(
+                tcp.sourcePort.toInt(),
+                TCPTunnel(
+                    tcp.ip.sourceAddress,
+                    tcp.sourcePort.toInt(),
+                    tcp.ip.destAddress,
+                    tcp.destPort.toInt()
+                )
             )
         }
         return tunnelArray.get(tcp.sourcePort.toInt())
@@ -118,7 +122,8 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
                 confirmRsp.destPort = tcp.sourcePort
                 confirmRsp.dataOffset = 40
                 confirmRsp.seqNum = tcp.ackNum
-                confirmRsp.ackNum = tcp.seqNum + tcp.ip.totalLength - tcp.ip.headerLength - tcp.dataOffset
+                confirmRsp.ackNum =
+                    tcp.seqNum + tcp.ip.totalLength - tcp.ip.headerLength - tcp.dataOffset
                 if (tunnel.seqNum < confirmRsp.seqNum) {
                     tunnel.seqNum = confirmRsp.seqNum
                     tunnel.ackNum = confirmRsp.ackNum
@@ -135,7 +140,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
                     confirmRsp.ip.headerLength
                 )
                 pendingWritePacketQueue.add(ip)
-                tunnel.transferData(tcp.data)
+                tunnel.transferData(tcp.seqNum, tcp.data)
             }
         } else if (tcp.FIN == 1) {
             tunnel.status = TCPStatus.CLOSING
@@ -167,6 +172,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             tunnel.seqNum = waveConfirmRsp.seqNum
             waveConfirmRsp.ackNum = tcp.seqNum + 1
             tunnel.ackNum = waveConfirmRsp.ackNum
+            tunnel.window = tcp.window.toInt()
             waveConfirmRsp.ACK = 1
             waveConfirmRsp.window = tcp.window
             waveConfirmRsp.options = tcp.options
@@ -244,6 +250,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         serverRsp.seqNum = tunnel.seqNum
         serverRsp.ackNum = tunnel.ackNum
         serverRsp.ACK = 1
+        serverRsp.PSH = 1
         serverRsp.window = Short.MAX_VALUE.dec()
         serverRsp.options = tunnel.tcpOption
         serverRsp.data = data

@@ -4,41 +4,45 @@ import com.stanley.packet_capture.tcpip.constants.TCPStatus
 import com.stanley.packet_capture.utils.VPNUtils
 import com.stanley.tcpip.utils.intIpToStr
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.SocketChannel
+import java.net.Proxy
+import java.net.Socket
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Created by Stanley on 2020-01-20.
  */
-class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: Int, val destPort: Int, private val selector: Selector): Tunnel {
+class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: Int, val destPort: Int): Tunnel {
 
-    private var socketChannel: SocketChannel? = null
+    var socket = Socket(Proxy.NO_PROXY)
     var status = TCPStatus.PREPARE
     var closeListener: Tunnel.Callback? = null
     var seqNum = 1
     var ackNum = 1
     val pendingWritePacketQueue =  ConcurrentLinkedQueue<ByteArray>()
+    private val pendingWriteSeqNum = HashSet<Int>()
     var tcpOption = ByteArray(0)
+    var window = 1023
     private var isConnected = false
 
     override fun connect() {
         if (!isConnected) {
             isConnected = true
             Thread {
-                socketChannel = SocketChannel.open()
-                socketChannel!!.configureBlocking(false)
-                socketChannel!!.register(selector, SelectionKey.OP_READ or SelectionKey.OP_CONNECT or SelectionKey.OP_WRITE, this)
-                VPNUtils.protect(socketChannel!!.socket())
-                socketChannel!!.connect(InetSocketAddress(intIpToStr(destAddress), destPort))
+                VPNUtils.protect(socket)
+                socket.connect(InetSocketAddress(intIpToStr(destAddress), destPort))
             }.start()
         }
     }
 
     override fun transferData(data: ByteArray) {
         pendingWritePacketQueue.add(data)
-        socketChannel?.keyFor(selector)?.interestOps(socketChannel!!.keyFor(selector).interestOps().and(SelectionKey.OP_WRITE))
+    }
+
+    fun transferData(seqNum: Int, data: ByteArray) {
+        if (!pendingWriteSeqNum.contains(seqNum)) {
+            pendingWriteSeqNum.add(seqNum)
+            transferData(data)
+        }
     }
 
     override fun receiveData(data: ByteArray) {
@@ -47,7 +51,7 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: In
     }
 
     override fun close() {
-        if (socketChannel != null && socketChannel!!.isOpen) socketChannel!!.close()
+        if (socket.isConnected) socket.close()
         closeListener?.onTunnelClosed(this)
     }
 }

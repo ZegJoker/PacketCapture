@@ -1,13 +1,19 @@
 package com.stanley.packet_capture
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.stanley.packet_capture.constants.Config
 import com.stanley.packet_capture.tcpip.PacketDistributor
 import com.stanley.packet_capture.tcpip.PacketReader
 import com.stanley.packet_capture.tcpip.PacketWriter
+import com.stanley.packet_capture.utils.VPNUtils
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -33,14 +39,39 @@ class CaptureService : VpnService(), Closeable {
         )
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        VPNUtils.vpnService = this
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!running) {
+            val notificationManager = NotificationManagerCompat.from(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(Config.NOTIFICATION_CHANNEL_ID, getString(R.string.session), NotificationManager.IMPORTANCE_HIGH)
+                notificationManager.createNotificationChannel(channel)
+            }
+            notificationManager.notify(Config.SERVICE_NOTIFICATION_ID, NotificationCompat.Builder(this, packageName)
+                .setChannelId(Config.NOTIFICATION_CHANNEL_ID)
+                .setAutoCancel(false)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentTitle(getString(R.string.session))
+                .setContentText(getString(R.string.data_capture))
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .build())
             running = true
             establish()
             startVpn()
             packetDistributor.startDispatch()
         }
         return Service.START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        VPNUtils.vpnService = null
+        NotificationManagerCompat.from(this).cancel(Config.SERVICE_NOTIFICATION_ID)
     }
 
     /**

@@ -37,6 +37,7 @@ class PacketDistributor(
     }
 
     private fun startInternal() {
+        tcpConsumer.dataObserver.start()
         Thread {
             while (running) {
                 val ip = pendingReadPacketQueue.poll()

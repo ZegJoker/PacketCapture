@@ -14,6 +14,7 @@ import com.stanley.tcpip.model.IP
 import com.stanley.tcpip.model.TCP
 import com.stanley.tcpip.utils.calcIPChecksum
 import com.stanley.tcpip.utils.calcTCPChecksum
+import java.nio.channels.Selector
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.random.Random
 
@@ -23,10 +24,8 @@ import kotlin.random.Random
 class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>) :
     PacketConsumer<TCP>, Tunnel.Callback {
     private val tunnelArray: SparseArray<TCPTunnel> = SparseArray()
-    private val dataObserver = TCPDataObserver()
-    init {
-        dataObserver.start()
-    }
+    private val selector = Selector.open()
+    val dataObserver = TCPDataObserver(selector)
     override fun consumePacket(packet: TCP) {
         when (checkAndSetTcpStatus(packet).status) {
             TCPStatus.TRANSFERRING -> transferData(packet)
@@ -38,19 +37,17 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     private fun checkAndSetTcpStatus(tcp: TCP): TCPTunnel {
         if (tunnelArray.get(tcp.sourcePort.toInt()) == null) {
             tunnelArray.put(tcp.sourcePort.toInt(),
-                TCPTunnel(tcp.ip.sourceAddress, tcp.sourcePort.toInt(), tcp.ip.destAddress, tcp.destPort.toInt())
+                TCPTunnel(tcp.ip.sourceAddress, tcp.sourcePort.toInt(), tcp.ip.destAddress, tcp.destPort.toInt(), selector)
             )
         }
         return tunnelArray.get(tcp.sourcePort.toInt())
     }
 
     private fun handshake(tcp: TCP) {
+        Log.d(TAG, "tcp handshake")
         val tunnel = tunnelArray.get(tcp.sourcePort.toInt())
         if (tcp.SYN == 1 && tcp.ACK == 0 && tcp.FIN == 0) {
             if (tunnel.status == TCPStatus.PREPARE) {
-                tunnel.status = TCPStatus.HANDSHAKING
-                tunnel.connect()
-                tunnel.tcpOption = tcp.options
                 val packet = ByteArray(60)
                 val ip = IP(packet)
                 ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
@@ -85,6 +82,8 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
                     handshakeRsp.ip.headerLength
                 )
                 pendingWritePacketQueue.add(ip)
+                tunnel.status = TCPStatus.HANDSHAKING
+                tunnel.tcpOption = tcp.options
             }
         } else if (tcp.RST == 1) {
             tunnel.close()
@@ -92,6 +91,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             Log.d(TAG, "Request to close tunnel")
             closeTunnel(tcp)
         } else if (tcp.ACK == 1) {
+            tunnel.connect()
             tunnel.status = TCPStatus.TRANSFERRING
         }
     }
@@ -100,8 +100,6 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         val tunnel = tunnelArray.get(tcp.sourcePort.toInt())
         if (tcp.ACK == 1) {
             if (tcp.data.isNotEmpty()) {
-                val requestData = String(tcp.data)
-                Log.d(TAG, "data: $requestData")
                 val packet = ByteArray(60)
                 val ip = IP(packet)
                 ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()

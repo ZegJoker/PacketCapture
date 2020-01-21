@@ -27,6 +27,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     ).enqueue(object: Callback {
         override fun onFailure(call: Call, e: IOException) {
             Log.e("MainActivity", e.message, e)
+            runOnUiThread {
+                tvResponse.text = e.message
+            }
         }
 
         override fun onResponse(call: Call, response: Response) {
@@ -35,6 +38,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
             response.body?.string()?.let {
                 Log.d("MainActivity", it)
+                runOnUiThread {
+                    tvResponse.text = "Response code: ${response.code}\n$it"
+                }
             }
         }
     })

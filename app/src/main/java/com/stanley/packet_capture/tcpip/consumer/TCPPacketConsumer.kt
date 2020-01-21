@@ -5,7 +5,7 @@ import android.util.SparseArray
 import androidx.core.util.forEach
 import com.stanley.packet_capture.tcpip.constants.TCPIPConstants
 import com.stanley.packet_capture.tcpip.constants.TCPStatus
-import com.stanley.packet_capture.tcpip.data.TCPDataObserver
+import com.stanley.packet_capture.tcpip.tunnel.RemoteCommunicator
 import com.stanley.packet_capture.tcpip.tunnel.TCPTunnel
 import com.stanley.packet_capture.tcpip.tunnel.Tunnel
 import com.stanley.packet_capture.utils.TAG
@@ -23,7 +23,8 @@ import kotlin.random.Random
 class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>) :
     PacketConsumer<TCP>, Tunnel.Callback {
     private val tunnelArray: SparseArray<TCPTunnel> = SparseArray()
-    val dataObserver = TCPDataObserver(tunnelArray)
+    val dataObserver =
+        RemoteCommunicator(tunnelArray)
     override fun consumePacket(packet: TCP) {
         when (checkAndSetTcpStatus(packet).status) {
             TCPStatus.TRANSFERRING -> transferData(packet)

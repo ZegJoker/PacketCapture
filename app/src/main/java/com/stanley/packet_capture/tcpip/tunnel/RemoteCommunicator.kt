@@ -1,14 +1,13 @@
-package com.stanley.packet_capture.tcpip.data
+package com.stanley.packet_capture.tcpip.tunnel
 
 import android.util.SparseArray
 import androidx.core.util.forEach
-import com.stanley.packet_capture.tcpip.tunnel.TCPTunnel
 import java.io.Closeable
 
 /**
  * Created by Stanley on 2020-01-20.
  */
-class TCPDataObserver(private val tunnels: SparseArray<TCPTunnel>) : Thread(), Closeable {
+class RemoteCommunicator(private val tunnels: SparseArray<TCPTunnel>) : Thread(), Closeable {
     private var running = false
     override fun start() {
         if (running) return

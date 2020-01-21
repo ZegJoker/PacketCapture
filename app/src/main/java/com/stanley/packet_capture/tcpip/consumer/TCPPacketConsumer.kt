@@ -234,7 +234,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         val ip = IP(packet)
         ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
         ip.headerLength = TCPIPConstants.DEFAULT_IP_PACKET_HEADER_LENGTH.toByte()
-        ip.totalLength = (60 + data.size).toShort()
+        ip.totalLength = (20 + 20 + tunnel.tcpOption.size + data.size).toShort()
         ip.identification =
             Random(System.currentTimeMillis()).nextInt(0, Short.MAX_VALUE.toInt()).toShort()
         ip.flags = 2
@@ -246,7 +246,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         val serverRsp = TCP(ip)
         serverRsp.sourcePort = tunnel.destPort.toShort()
         serverRsp.destPort = tunnel.sourceAddress.toShort()
-        serverRsp.dataOffset = 40
+        serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
         serverRsp.seqNum = tunnel.seqNum
         serverRsp.ackNum = tunnel.ackNum
         serverRsp.ACK = 1

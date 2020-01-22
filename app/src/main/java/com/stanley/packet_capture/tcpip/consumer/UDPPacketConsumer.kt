@@ -4,6 +4,9 @@ import com.stanley.tcpip.model.IP
 import com.stanley.tcpip.model.UDP
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class UDPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>):
     PacketConsumer<UDP> {
     override fun consumePacket(packet: UDP) {

@@ -5,7 +5,7 @@ import android.util.SparseArray
 import androidx.core.util.forEach
 import com.stanley.packet_capture.tcpip.constants.TCPIPConstants
 import com.stanley.packet_capture.tcpip.constants.TCPStatus
-import com.stanley.packet_capture.tcpip.tunnel.RemoteCommunicator
+import com.stanley.packet_capture.tcpip.tunnel.TCPRemoteCommunicator
 import com.stanley.packet_capture.tcpip.tunnel.TCPTunnel
 import com.stanley.packet_capture.tcpip.tunnel.Tunnel
 import com.stanley.packet_capture.utils.TAG
@@ -24,7 +24,8 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     PacketConsumer<TCP>, Tunnel.Callback {
     private val tunnelArray: SparseArray<TCPTunnel> = SparseArray()
     val dataObserver =
-        RemoteCommunicator(tunnelArray)
+        TCPRemoteCommunicator(tunnelArray)
+
     override fun consumePacket(packet: TCP) {
         when (checkAndSetTcpStatus(packet).status) {
             TCPStatus.TRANSFERRING -> transferData(packet)
@@ -35,14 +36,16 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
 
     private fun checkAndSetTcpStatus(tcp: TCP): TCPTunnel {
         if (tunnelArray.get(tcp.sourcePort.toInt()) == null) {
+            val tunnel = TCPTunnel(
+                tcp.ip.sourceAddress,
+                tcp.sourcePort.toInt(),
+                tcp.ip.destAddress,
+                tcp.destPort.toInt()
+            )
+            tunnel.tunnelCallback = this
             tunnelArray.put(
                 tcp.sourcePort.toInt(),
-                TCPTunnel(
-                    tcp.ip.sourceAddress,
-                    tcp.sourcePort.toInt(),
-                    tcp.ip.destAddress,
-                    tcp.destPort.toInt()
-                )
+                tunnel
             )
         }
         return tunnelArray.get(tcp.sourcePort.toInt())

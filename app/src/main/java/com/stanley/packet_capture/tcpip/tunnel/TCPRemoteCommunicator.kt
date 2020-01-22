@@ -7,7 +7,7 @@ import java.io.Closeable
 /**
  * Created by Stanley on 2020-01-20.
  */
-class RemoteCommunicator(private val tunnels: SparseArray<TCPTunnel>) : Thread(), Closeable {
+class TCPRemoteCommunicator(private val tunnels: SparseArray<TCPTunnel>) : Thread(), Closeable {
     private var running = false
     override fun start() {
         if (running) return

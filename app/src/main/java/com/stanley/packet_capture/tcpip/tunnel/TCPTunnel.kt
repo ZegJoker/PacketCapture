@@ -15,7 +15,7 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: In
 
     var socket = Socket(Proxy.NO_PROXY)
     var status = TCPStatus.PREPARE
-    var closeListener: Tunnel.Callback? = null
+    var tunnelCallback: Tunnel.Callback? = null
     var seqNum = 1
     var ackNum = 1
     val pendingWritePacketQueue =  ConcurrentLinkedQueue<ByteArray>()
@@ -46,12 +46,12 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: In
     }
 
     override fun receiveData(data: ByteArray) {
-        closeListener?.onDataReceived(this, data)
+        tunnelCallback?.onDataReceived(this, data)
         seqNum += data.size
     }
 
     override fun close() {
         if (socket.isConnected) socket.close()
-        closeListener?.onTunnelClosed(this)
+        tunnelCallback?.onTunnelClosed(this)
     }
 }

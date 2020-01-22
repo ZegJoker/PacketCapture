@@ -9,6 +9,9 @@ import com.stanley.tcpip.model.UDP
 import java.io.Closeable
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class PacketDistributor(
     private val pendingReadPacketQueue: ConcurrentLinkedQueue<IP>,
     private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>

@@ -6,6 +6,9 @@ import java.io.Closeable
 import java.io.FileInputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class PacketReader(private val reader: FileInputStream): Closeable {
     val pendingPacketQueue by lazy { ConcurrentLinkedQueue<IP>() }
 

@@ -5,6 +5,9 @@ import java.io.Closeable
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class PacketWriter(private val writer: FileOutputStream): Closeable {
     val pendingPacketQueue by lazy { ConcurrentLinkedQueue<IP>() }
 

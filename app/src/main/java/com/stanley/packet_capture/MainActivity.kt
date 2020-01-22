@@ -11,6 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     companion object {
@@ -29,7 +32,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         checkStoragePermission()
     }
 
-    fun checkStoragePermission() {
+    private fun checkStoragePermission() {
         val readExternalStoragePermissionStatus =
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
         val writeExternalStoragePermissionStatus =

@@ -18,6 +18,9 @@ import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
+/**
+ * Created by Stanley on 2020-01-10.
+ */
 class CaptureService : VpnService(), Closeable {
 
     var running = false
@@ -48,14 +51,14 @@ class CaptureService : VpnService(), Closeable {
         if (!running) {
             val notificationManager = NotificationManagerCompat.from(this)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(Config.NOTIFICATION_CHANNEL_ID, getString(R.string.session), NotificationManager.IMPORTANCE_HIGH)
+                val channel = NotificationChannel(Config.NOTIFICATION_CHANNEL_ID, getString(R.string.session), NotificationManager.IMPORTANCE_LOW)
                 notificationManager.createNotificationChannel(channel)
             }
             notificationManager.notify(Config.SERVICE_NOTIFICATION_ID, NotificationCompat.Builder(this, packageName)
                 .setChannelId(Config.NOTIFICATION_CHANNEL_ID)
                 .setAutoCancel(false)
                 .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setContentTitle(getString(R.string.session))
                 .setContentText(getString(R.string.data_capture))
                 .setSmallIcon(android.R.drawable.ic_lock_lock)

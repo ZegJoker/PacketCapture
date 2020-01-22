@@ -50,6 +50,10 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: In
         seqNum += data.size
     }
 
+    fun closeTunnelFromServer() {
+        tunnelCallback?.onTunnelClosedFromServer(this)
+    }
+
     override fun close() {
         if (socket.isConnected) socket.close()
         tunnelCallback?.onTunnelClosed(this)

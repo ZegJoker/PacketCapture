@@ -6,6 +6,8 @@ package com.stanley.packet_capture.tcpip.constants
 enum class TCPStatus {
     PREPARE,
     HANDSHAKING,
-    TRANSFERRING,
-    CLOSING
+    TRANSFERRING_PENDING_CONNECTION,
+    TRANSFERRING_CONNECTED,
+    CLOSING_CLIENT,
+    CLOSING_SERVER
 }

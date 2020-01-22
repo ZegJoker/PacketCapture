@@ -72,6 +72,8 @@ class PacketDistributor(
 
     override fun close() {
         stopDispatch()
+        tcpConsumer.close()
+        udpConsumer.close()
     }
 
 }

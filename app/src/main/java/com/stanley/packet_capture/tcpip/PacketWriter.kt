@@ -1,5 +1,7 @@
 package com.stanley.packet_capture.tcpip
 
+import android.util.Log
+import com.stanley.packet_capture.utils.TAG
 import com.stanley.tcpip.model.IP
 import java.io.Closeable
 import java.io.FileOutputStream
@@ -15,6 +17,7 @@ class PacketWriter(private val writer: FileOutputStream): Closeable {
         if (pendingPacketQueue.isNotEmpty()) {
             val ip = pendingPacketQueue.poll()
             if (ip != null) {
+                Log.d(TAG, "Write packet into client")
                 writer.write(ip.packet, 0, ip.totalLength.toInt())
             }
         }

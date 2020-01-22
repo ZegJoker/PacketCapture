@@ -12,5 +12,6 @@ interface Tunnel: Closeable {
     interface Callback {
         fun onTunnelClosed(tunnel: Tunnel)
         fun onDataReceived(tunnel: Tunnel, data: ByteArray)
+        fun onTunnelClosedFromServer(tunnel: Tunnel)
     }
 }

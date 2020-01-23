@@ -1,6 +1,5 @@
 package com.stanley.packet_capture.tcpip.consumer
 
-import android.annotation.SuppressLint
 import android.util.Log
 import com.stanley.packet_capture.tcpip.constants.TCPIPConstants
 import com.stanley.packet_capture.tcpip.constants.TCPStatus
@@ -22,7 +21,7 @@ import kotlin.random.Random
  */
 class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>) :
     PacketConsumer<TCP>, Tunnel.Callback {
-    @SuppressLint("UseSparseArrays")
+
     private val tunnelArray = ConcurrentHashMap<Short, TCPTunnel>()
     val dataObserver =
         TCPRemoteCommunicator(tunnelArray)
@@ -270,7 +269,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             ip.destAddress = tunnel.sourceAddress
             val serverRsp = TCP(ip)
             serverRsp.sourcePort = tunnel.destPort
-            serverRsp.destPort = tunnel.sourceAddress.toShort()
+            serverRsp.destPort = tunnel.sourcePort
             serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
             serverRsp.seqNum = tcp.ackNum
             serverRsp.ackNum = tcp.seqNum + 1
@@ -351,7 +350,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         ip.destAddress = tunnel.sourceAddress
         val serverRsp = TCP(ip)
         serverRsp.sourcePort = tunnel.destPort
-        serverRsp.destPort = tunnel.sourceAddress.toShort()
+        serverRsp.destPort = tunnel.sourcePort
         serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
         serverRsp.seqNum = tunnel.seqNum + 1
         serverRsp.ackNum = tunnel.ackNum

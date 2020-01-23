@@ -1,14 +1,12 @@
 package com.stanley.packet_capture.tcpip.tunnel
 
-import android.util.SparseArray
-import androidx.core.util.forEach
 import com.stanley.packet_capture.tcpip.constants.TCPStatus
 import java.io.Closeable
 
 /**
  * Created by Stanley on 2020-01-20.
  */
-class TCPRemoteCommunicator(private val tunnels: Map<Int, TCPTunnel>) : Thread(), Closeable {
+class TCPRemoteCommunicator(private val tunnels: Map<Short, TCPTunnel>) : Thread(), Closeable {
     private var running = false
     override fun start() {
         if (running) return
@@ -22,7 +20,7 @@ class TCPRemoteCommunicator(private val tunnels: Map<Int, TCPTunnel>) : Thread()
             while (iterator.hasNext()) {
                 val next = iterator.next()
                 val tunnel = next.value
-                if (tunnel.socket.isConnected) {
+                if (tunnel.socket.isConnected && tunnel.status == TCPStatus.TRANSFERRING_PENDING_CONNECTION) {
                     tunnel.status = TCPStatus.TRANSFERRING_CONNECTED
                     if (tunnel.pendingWritePacketQueue.isNotEmpty()) {
                         val sendData = tunnel.pendingWritePacketQueue.poll()

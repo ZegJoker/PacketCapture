@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 /**
  * Created by Stanley on 2020-01-20.
  */
-class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: Int, val destPort: Int): Tunnel {
+class TCPTunnel(val sourceAddress: Int, val sourcePort: Short, val destAddress: Int, val destPort: Short): Tunnel {
 
     var socket = Socket(Proxy.NO_PROXY)
     var status = TCPStatus.PREPARE
@@ -29,7 +29,7 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Int, val destAddress: In
             isConnected = true
             Thread {
                 VPNUtils.protect(socket)
-                socket.connect(InetSocketAddress(intIpToStr(destAddress), destPort))
+                socket.connect(InetSocketAddress(intIpToStr(destAddress), destPort.toInt()))
             }.start()
         }
     }

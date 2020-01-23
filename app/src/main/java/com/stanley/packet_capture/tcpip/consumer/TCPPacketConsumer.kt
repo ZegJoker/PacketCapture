@@ -1,5 +1,6 @@
 package com.stanley.packet_capture.tcpip.consumer
 
+import android.annotation.SuppressLint
 import android.util.Log
 import com.stanley.packet_capture.tcpip.constants.TCPIPConstants
 import com.stanley.packet_capture.tcpip.constants.TCPStatus
@@ -21,7 +22,8 @@ import kotlin.random.Random
  */
 class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQueue<IP>) :
     PacketConsumer<TCP>, Tunnel.Callback {
-    private val tunnelArray = ConcurrentHashMap<Int, TCPTunnel>()
+    @SuppressLint("UseSparseArrays")
+    private val tunnelArray = ConcurrentHashMap<Short, TCPTunnel>()
     val dataObserver =
         TCPRemoteCommunicator(tunnelArray)
 
@@ -34,24 +36,26 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     private fun checkAndSetTcpStatus(tcp: TCP): TCPTunnel {
-        if (tunnelArray[tcp.sourcePort.toInt()] == null) {
+        if (tunnelArray[tcp.sourcePort] == null) {
+            Log.d(TAG, "Cannot find tunnel, create a new for port: ${tcp.sourcePort}, map size: ${tunnelArray.size}")
             val tunnel = TCPTunnel(
                 tcp.ip.sourceAddress,
-                tcp.sourcePort.toInt(),
+                tcp.sourcePort,
                 tcp.ip.destAddress,
-                tcp.destPort.toInt()
+                tcp.destPort
             )
             tunnel.tunnelCallback = this
-            tunnelArray[tcp.sourcePort.toInt()] = tunnel
+            tunnelArray[tcp.sourcePort] = tunnel
         }
-        return tunnelArray[tcp.sourcePort.toInt()]!!
+        return tunnelArray[tcp.sourcePort]!!
     }
 
     private fun handshake(tcp: TCP) {
-        Log.d(TAG, "tcp handshake")
-        val tunnel = tunnelArray[tcp.sourcePort.toInt()]!!
+        val tunnel = tunnelArray[tcp.sourcePort]!!
+        Log.d(TAG, "tcp handshake, source port: ${tcp.sourcePort}, dest port: ${tcp.destPort}, tunnel_status=${tunnel.status.name}")
         if (tcp.SYN == 1 && tcp.ACK == 0 && tcp.FIN == 0) {
             if (tunnel.status == TCPStatus.PREPARE) {
+                tunnel.status = TCPStatus.HANDSHAKING
                 val packet = ByteArray(60)
                 val ip = IP(packet)
                 ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
@@ -86,7 +90,6 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
                     handshakeRsp.ip.headerLength
                 )
                 pendingWritePacketQueue.add(ip)
-                tunnel.status = TCPStatus.HANDSHAKING
                 tunnel.tcpOption = tcp.options
             }
         } else if (tcp.RST == 1) {
@@ -101,17 +104,50 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     private fun transferData(tcp: TCP) {
-        val tunnel = tunnelArray[tcp.sourcePort.toInt()]!!
+        val tunnel = tunnelArray[tcp.sourcePort]!!
         if (tcp.ACK == 1 && tcp.PSH == 1) {
             tunnel.tcpOption = tcp.options
             if (tcp.data.isNotEmpty()) {
-                Log.d(TAG, "origin checksum: ip=${tcp.ip.checksum}, tcp=${tcp.checksum}")
+                /*Log.d(TAG, "origin checksum: ip=${tcp.ip.checksum}, tcp=${tcp.checksum}")
                 tcp.ip.checksum = 0
                 tcp.checksum = 0
                 tcp.ip.checksum = calcIPChecksum(tcp.ip.packet, tcp.ip.headerLength.toInt())
                 tcp.checksum = calcTCPChecksum(tcp.ip.packet, tcp.ip.totalLength - tcp.ip.headerLength, tcp.ip.sourceAddress, tcp.ip.destAddress, tcp.ip.headerLength)
-                Log.d(TAG, "re-calc checksum: ip=${tcp.ip.checksum}, tcp=${tcp.checksum}")
-                Log.d(TAG, "received client's data: size=${tcp.data.size}, seqNum=${tcp.seqNum}, ackNum=${tcp.ackNum}")
+                Log.d(TAG, "re-calc checksum: ip=${tcp.ip.checksum}, tcp=${tcp.checksum}")*/
+
+                Log.d(TAG, "received client's data: size=${tcp.data.size}, source_port=${tcp.sourcePort}, seqNum=${tcp.seqNum}, ackNum=${tcp.ackNum}")
+                val packet = ByteArray(60)
+                val ip = IP(packet)
+                ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
+                ip.headerLength = TCPIPConstants.DEFAULT_IP_PACKET_HEADER_LENGTH.toByte()
+                ip.totalLength = 60
+                ip.identification =
+                    Random(System.currentTimeMillis()).nextInt(0, Short.MAX_VALUE.toInt()).toShort()
+                ip.flags = tcp.ip.flags
+                ip.fragmentOffset = 0
+                ip.ttl = 60
+                ip.protocol = ProtocolCodes.TCP
+                ip.sourceAddress = tcp.ip.destAddress
+                ip.destAddress = tcp.ip.sourceAddress
+                val confirmRsp = TCP(ip)
+                confirmRsp.sourcePort = tcp.destPort
+                confirmRsp.destPort = tcp.sourcePort
+                confirmRsp.dataOffset = 40
+                confirmRsp.seqNum = tcp.ackNum
+                confirmRsp.ackNum =
+                    tcp.seqNum + tcp.ip.totalLength - tcp.ip.headerLength - tcp.dataOffset
+                confirmRsp.ACK = 1
+                confirmRsp.window = tcp.window
+                confirmRsp.options = tunnel.tcpOption
+                ip.checksum = calcIPChecksum(ip.packet, ip.headerLength.toInt())
+                confirmRsp.checksum = calcTCPChecksum(
+                    confirmRsp.ip.packet,
+                    confirmRsp.dataOffset.toInt(),
+                    confirmRsp.ip.sourceAddress,
+                    confirmRsp.ip.destAddress,
+                    confirmRsp.ip.headerLength
+                )
+                pendingWritePacketQueue.add(ip)
                 if (tunnel.seqNum < tcp.ackNum) {
                     tunnel.seqNum = tcp.ackNum
                     tunnel.ackNum = tcp.seqNum + tcp.ip.totalLength - tcp.ip.headerLength - tcp.dataOffset
@@ -133,7 +169,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     private fun closeTunnel(tcp: TCP) {
-        val tunnel = tunnelArray[tcp.sourcePort.toInt()]!!
+        val tunnel = tunnelArray[tcp.sourcePort]!!
         if (tunnel.status == TCPStatus.CLOSING_CLIENT) {
             clientClosingProcess(tcp)
         } else if (tunnel.status == TCPStatus.CLOSING_SERVER) {
@@ -142,7 +178,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     private fun clientClosingProcess(tcp: TCP) {
-        val tunnel = tunnelArray[tcp.sourcePort.toInt()]!!
+        val tunnel = tunnelArray[tcp.sourcePort]!!
         if (tcp.FIN == 1) {
             val packet = ByteArray(60)
             val ip = IP(packet)
@@ -217,7 +253,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     private fun serverClosingProcess(tcp: TCP) {
-        val tunnel = tunnelArray[tcp.sourcePort.toInt()]!!
+        val tunnel = tunnelArray[tcp.sourcePort]!!
         if (tcp.FIN == 1) {
             val packet = ByteArray(20 + 20 + tunnel.tcpOption.size)
             val ip = IP(packet)
@@ -233,7 +269,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             ip.sourceAddress = tunnel.destAddress
             ip.destAddress = tunnel.sourceAddress
             val serverRsp = TCP(ip)
-            serverRsp.sourcePort = tunnel.destPort.toShort()
+            serverRsp.sourcePort = tunnel.destPort
             serverRsp.destPort = tunnel.sourceAddress.toShort()
             serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
             serverRsp.seqNum = tcp.ackNum
@@ -261,7 +297,6 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
 
     override fun onDataReceived(tunnel: Tunnel, data: ByteArray) {
         if (tunnel !is TCPTunnel) return
-
         val packet = ByteArray(20 + 20 + tunnel.tcpOption.size + data.size)
         val ip = IP(packet)
         ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
@@ -276,8 +311,8 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         ip.sourceAddress = tunnel.destAddress
         ip.destAddress = tunnel.sourceAddress
         val serverRsp = TCP(ip)
-        serverRsp.sourcePort = tunnel.destPort.toShort()
-        serverRsp.destPort = tunnel.sourceAddress.toShort()
+        serverRsp.sourcePort = tunnel.destPort
+        serverRsp.destPort = tunnel.sourcePort
         serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
         serverRsp.seqNum = tunnel.seqNum
         serverRsp.ackNum = tunnel.ackNum
@@ -295,7 +330,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
             serverRsp.ip.headerLength
         )
         pendingWritePacketQueue.add(ip)
-        Log.d(TAG, "received data from server: size=${data.size}, seqNum=${serverRsp.seqNum}, ackNum=${serverRsp.ackNum}")
+        Log.d(TAG, "received data from server: size=${data.size}, dest_port=${serverRsp.destPort}, seqNum=${serverRsp.seqNum}, ackNum=${serverRsp.ackNum}")
     }
 
     override fun onTunnelClosedFromServer(tunnel: Tunnel) {
@@ -315,7 +350,7 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
         ip.sourceAddress = tunnel.destAddress
         ip.destAddress = tunnel.sourceAddress
         val serverRsp = TCP(ip)
-        serverRsp.sourcePort = tunnel.destPort.toShort()
+        serverRsp.sourcePort = tunnel.destPort
         serverRsp.destPort = tunnel.sourceAddress.toShort()
         serverRsp.dataOffset = (20 + tunnel.tcpOption.size).toByte()
         serverRsp.seqNum = tunnel.seqNum + 1

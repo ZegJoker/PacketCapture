@@ -23,6 +23,7 @@ class TCPTunnel(val sourceAddress: Int, val sourcePort: Short, val destAddress: 
     var tcpOption = ByteArray(0)
     var window = 1023
     private var isConnected = false
+    var lastActiveTime = -1L
 
     override fun connect() {
         if (!isConnected) {

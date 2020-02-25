@@ -333,8 +333,9 @@ class TCPPacketConsumer(private val pendingWritePacketQueue: ConcurrentLinkedQue
     }
 
     override fun onTunnelClosedFromServer(tunnel: Tunnel) {
-        if (tunnel !is TCPTunnel) return
+        if (tunnel !is TCPTunnel || tunnel.status != TCPStatus.PENDING_CLOSE_SERVER) return
         Log.d(TAG, "Close tunnel from server")
+        tunnel.status = TCPStatus.CLOSING_SERVER
         val packet = ByteArray(20 + 20 + tunnel.tcpOption.size)
         val ip = IP(packet)
         ip.version = TCPIPConstants.IP_PACKET_VERSION_IPV4.toByte()
